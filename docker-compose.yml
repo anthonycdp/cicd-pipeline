@@ -1,0 +1,68 @@
+services:
+  app:
+    build:
+      context: .
+      target: development
+    container_name: cicd-demo-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    volumes:
+      - ./src:/app/src:ro
+      - ./package.json:/app/package.json:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - app-network
+
+  app-prod:
+    build:
+      context: .
+      target: production
+    container_name: cicd-demo-api-prod
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    profiles:
+      - production
+    networks:
+      - app-network
+
+  test:
+    build:
+      context: .
+      target: development
+    container_name: cicd-demo-test
+    environment:
+      - NODE_ENV=test
+    command: npm test
+    volumes:
+      - ./coverage:/app/coverage
+    profiles:
+      - test
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  node_modules:
